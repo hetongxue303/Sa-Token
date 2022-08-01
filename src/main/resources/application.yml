@@ -1,0 +1,10 @@
+server:
+  port: 8080
+spring:
+  application:
+    name: sa-token
+  config:
+    import:
+      - application-web.yml
+      - application-log.yml
+      - application-satoken.yml
