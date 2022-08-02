@@ -103,7 +103,7 @@ public class AuthController {
 
 - 登录结果
 
-![raw.githubusercontent.com](https://raw.githubusercontent.com/hetongxue303/Sa-Token/master/images/image-20220801221305165.png)
+![image-20220801221305165](C:\Users\hy\AppData\Roaming\Typora\typora-user-images\image-20220801221305165.png)
 
 由此可以看出，只需要一句代码 ` StpUtil.login(Object id)` 便可以使会话登录成功，而实际上，Sa-Token在背后为我们做了大量的工作，主要有：
 
@@ -117,7 +117,7 @@ public class AuthController {
 
 - 注销结果
 
-![raw.githubusercontent.com](https://raw.githubusercontent.com/hetongxue303/Sa-Token/master/images/image-20220801221248637.png)
+![image-20220801221248637](C:\Users\hy\AppData\Roaming\Typora\typora-user-images\image-20220801221248637.png)
 
 更多操作语句：
 
@@ -370,4 +370,180 @@ StpUtil.kickout(10001);
 // 再封禁账号
 StpUtil.disable(10001, 86400); 
 ```
+
+### 注解鉴权
+
+到目前为止，之前学习的各种方法已经可以使我们搭建一个基本的RBAC系统了，但是我们会发现一个问题，当我们在进行鉴权时，会重复的调用那几个方法，会显得有很多的代码冗余，并且这些鉴权是需要写在每一个业务逻辑之中，此时我们的业务逻辑和鉴权逻辑就混在一起了。鉴于系问题，sa-token也为我们提供了解决方案，通过使用注解的方式，优雅的实现鉴权。将鉴权与业务代码分离。
+
+sa-token通过使用一个全局拦截器来完成注解鉴权功能，为了使项目产生不必要负担，拦截器默认是不开启的。因此我们需要手动将sa-token的全局拦截器注册到你的项目中。并且注解鉴权只能使用在`controller`层。
+
+#### 1.注册全局拦截器
+
+新建一个配置类，我这以`SaTokenConfiguration.java`为例。
+```java
+@Configuration
+@EnableWebMvc
+public class SaTokenConfiguration implements WebMvcConfigurer {
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        // 注册注解拦截器 排除不需要注解鉴权的接口地址 (与登录拦截器无关)
+        registry.addInterceptor(new SaAnnotationInterceptor()).addPathPatterns("/**");
+    }
+}
+```
+
+*注意：如果使用的是springboot 2.6.x 以上的版本 可能会出现拦截器失效 粗腰在添加一个`@EnableWebMvc`注解才可正常使用*
+
+#### 2.使用注解鉴权
+
+**注解说明**
+
+- `@SaCheckLogin`：登录认证    只有登录后才能通过；
+- `@SaCheckRole("admin")`：角色认证    必须具有指定角色标识才能通过；
+- `@SaCheckPermission("user:add")`：权限认证    必须具有指定权限才能通过；
+- `@SaCheckSafe`: 二级认证校验    必须二级认证之后才能通过；
+- `@SaCheckBasic`: HttpBasic认证    通过 Basic 认证后才能通过；
+
+> 1.`@SaCheckRole`与`@SaCheckPermission`注解可设置校验模式，例如：
+>
+> ```java
+> /**
+>  * mode取值说明
+>  * SaMode.AND：一组权限必须全部通过。
+>  * SaMode.OR：一组权限只需要通过一个。
+>  */
+> @SaCheckPermission(value = {"user:delete","user:insert"}, mode = SaMode.OR)
+> @GetMapping("/test")
+> public SaResult test() {
+>     return SaResult.ok("访问成功");
+> }
+> ```
+>
+> 2.角色权限双重校验 `or校验`
+>
+> 在某些场景中需要某种角色或者某种权限码  其中一个满足就能通过。
+>
+> ```java
+> /**
+>  * 表示仅需要有"user:insert"权限码或角色为"admin"就能通过。
+>  * orRole = "admin"：代表需要拥有admin角色即可通过。
+>  * orRole = {"admin","super-admin","test"}：代表只要满足其中一个角色即可。
+>  * orRole = {"admin,super-admin,test"}：代表必须同时具备三种角色才能通过。
+>  */
+> @SaCheckPermission(value = "user:insert", orRole = "admin")
+> @GetMapping("/test")
+> public SaResult test() {
+>     return SaResult.ok("访问成功");
+> }
+> ```
+
+示例代码：
+
+```java
+@RestController
+@RequestMapping("/auth")
+public class AuthController {
+    // 这里省去数据库校验 直接使用固定数据校验
+    private final static Long ID = 10001L;
+    private final static String USERNAME = "admin";
+    private final static String PASSWORD = "123456";
+
+    @PostMapping("/login")
+    public SaResult login(String username, String password) {
+        // 1.校验用户名和密码
+        if (USERNAME.equals(username) && PASSWORD.equals(password)) {
+            // 根据ID进行登录
+            StpUtil.login(ID);
+            return SaResult.ok().setMsg("登陆成功");
+        }
+        return SaResult.error().setMsg("登陆失败");
+    }
+
+    @GetMapping("/logout")
+    public SaResult logout() {
+        StpUtil.logout();
+        return SaResult.ok().setMsg("注销成功");
+    }
+
+    @GetMapping("/checkLogin")
+    public SaResult checkLogin() {
+        StpUtil.checkLogin();
+        return SaResult.ok().setMsg("已登陆");
+    }
+
+    /**
+     * 登录认证
+     */
+    @SaCheckLogin
+    @GetMapping("/tokenInfo")
+    public SaResult tokenInfo() {
+        return SaResult.ok().setData(StpUtil.getTokenInfo());
+    }
+
+    /**
+     * 权限认证
+     */
+    @SaCheckPermission("user:delete")
+    @DeleteMapping("/delete")
+    public SaResult delete() {
+        return SaResult.ok("删除成功");
+    }
+
+    @SaCheckPermission("user:insert")
+    @PostMapping("/insert")
+    public SaResult insert() {
+        return SaResult.ok("新增成功");
+    }
+
+    @SaCheckPermission("user:list")
+    @GetMapping("/list")
+    public SaResult list() {
+        return SaResult.ok("查询列表成功");
+    }
+
+    @SaCheckPermission("user:update")
+    @PutMapping("/update")
+    public SaResult update() {
+        return SaResult.ok("更新成功");
+    }
+
+    /**
+     * 由于没有user:other权限 此时访问会提示无权限
+     */
+    @SaCheckPermission("user:other")
+    @GetMapping("/other")
+    public SaResult other() {
+        return SaResult.ok("其他操作");
+    }
+
+    /**
+     * 角色认证
+     */
+    @SaCheckRole("admin")
+    @GetMapping("/isRole")
+    public SaResult isRole() {
+        return SaResult.ok("角色认证通过");
+    }
+
+    /**
+     * 二级认证
+     */
+    @SaCheckSafe
+    @GetMapping("/doubleCheck")
+    public SaResult doubleCheck() {
+        return SaResult.ok("二级验证通过");
+    }
+
+    /**
+     * Http Basic 认证
+     */
+    @SaCheckBasic(account = "sa:admin")
+    @GetMapping("/httpBasic")
+    public SaResult httpBasic() {
+        return SaResult.ok("httpBasic验证通过");
+    }
+}
+```
+
+
 
