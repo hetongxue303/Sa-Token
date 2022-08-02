@@ -103,7 +103,7 @@ public class AuthController {
 
 - 登录结果
 
-![image-20220801221305165](C:\Users\hy\AppData\Roaming\Typora\typora-user-images\image-20220801221305165.png)
+![image-20220801221305165](images/image-20220801221305165.png)
 
 由此可以看出，只需要一句代码 ` StpUtil.login(Object id)` 便可以使会话登录成功，而实际上，Sa-Token在背后为我们做了大量的工作，主要有：
 
@@ -117,7 +117,7 @@ public class AuthController {
 
 - 注销结果
 
-![image-20220801221248637](C:\Users\hy\AppData\Roaming\Typora\typora-user-images\image-20220801221248637.png)
+![image-20220801221248637](images/image-20220801221248637.png)
 
 更多操作语句：
 
@@ -310,4 +310,64 @@ StpUtil.hasPermission("index.html");      // false
 ```
 
 *注意：当一个账号拥有 `"*"` 权限时，即表示可以验证通过任何权限码 （角色认证同理），这也被叫做上帝权限(ps:真不错 哈哈哈)*
+
+
+
+### 踢人下线
+
+踢人下线也就是指对指定的`loginId`的`token`设置为失效状态，此时这个用户便会被强制下线，只能重新登陆。
+
+#### 强制注销
+
+```java
+StpUtil.logout(10001);                    // 强制指定账号注销下线 
+StpUtil.logout(10001, "phone");           // 强制指定账号指定端注销下线 
+StpUtil.logoutByTokenValue("token");      // 强制指定 Token 注销下线 
+```
+
+#### 踢人下线
+
+```java
+StpUtil.kickout(10001);                    // 将指定账号踢下线 
+StpUtil.kickout(10001, "phone");           // 将指定账号指定端踢下线
+StpUtil.kickoutByTokenValue("token");      // 将指定 Token 踢下线
+```
+
+> *强制注销 与 踢人下线区别：*
+>
+> - 强制注销相当于你自己注销 此时你的token会提示无效
+> - 踢人下线不会清楚token的信息 只是对这个账户做特定标记 会提示token已被踢下线
+
+#### 账号封禁
+
+用途在于一些管理者需要对违规的账号进行封禁，只是踢下线还可以在登陆，而封禁也就是禁止了该账号的登录。可以在封禁时设置封禁的时间，在这个期间内，该用户是不能进行登录的。
+
+> 参数说明：
+>
+> 参数1：账号ID
+>
+> 参数2：封禁时间(单位：秒  若为-1时，代表永久封禁)
+
+```java
+// 封禁指定账号 
+StpUtil.disable(10001, 86400); 
+
+// 查看指定账号是否被封禁 (true=已被封禁, false=未被封禁) 
+StpUtil.isDisable(10001); 
+
+// 查看指定账号剩余封禁时间，单位：秒
+StpUtil.getDisableTime(10001); 
+
+// 解除封禁
+StpUtil.untieDisable(10001); 
+```
+
+*注意：若用户正在登录，此时对其进行封禁并不会被立即注销。若要使其立即生效，可以先踢下线在进行封禁，例如：*
+
+```java
+// 先踢下线
+StpUtil.kickout(10001); 
+// 再封禁账号
+StpUtil.disable(10001, 86400); 
+```
 
