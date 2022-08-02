@@ -103,7 +103,7 @@ public class AuthController {
 
 - 登录结果
 
-![image-20220801221305165](images/image-20220801221305165.png)
+![raw.githubusercontent.com](https://raw.githubusercontent.com/hetongxue303/Sa-Token/master/images/image-20220801221305165.png)
 
 由此可以看出，只需要一句代码 ` StpUtil.login(Object id)` 便可以使会话登录成功，而实际上，Sa-Token在背后为我们做了大量的工作，主要有：
 
@@ -117,7 +117,7 @@ public class AuthController {
 
 - 注销结果
 
-![image-20220801221248637](images/image-20220801221248637.png)
+![raw.githubusercontent.com](https://raw.githubusercontent.com/hetongxue303/Sa-Token/master/images/image-20220801221248637.png)
 
 更多操作语句：
 
