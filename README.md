@@ -768,3 +768,81 @@ SaRouter.match("/**").free(r -> {
 SaRouter.match("/**").check(r -> {});
 ```
 
+### session会话
+
+session是我们在开发中常用到的数据缓存组件，通过使用session我们可以缓存一些高频读写的数据，从而提高程序性能。在sa-token中session的基础使用也是比较简单，例如：
+
+```java
+String data = "hello word!";
+// 设置缓存
+StpUtil.getSession().set("data", data);
+
+// 读取缓存
+String data = (String) StpUtil.getSession().get("data");
+```
+
+sa-token中session分类：
+
+- `User-Session`: 框架为每个 账号id 分配的 Session
+- `Token-Session`: 框架为每个 token 分配的 Session
+- `Custom-Session`: 以一个 特定的值 作为SessionId，来分配的 Session
+
+#### user-session
+
+```java
+// 获取当前账号id的Session (必须是登录后才能调用)
+StpUtil.getSession();
+
+// 获取当前账号id的Session, 并决定在Session尚未创建时，是否新建并返回
+StpUtil.getSession(true);
+
+// 获取账号id为10001的Session
+StpUtil.getSessionByLoginId(10001);
+
+// 获取账号id为10001的Session, 并决定在Session尚未创建时，是否新建并返回
+StpUtil.getSessionByLoginId(10001, true);
+
+// 获取SessionId为xxxx-xxxx的Session, 在Session尚未创建时, 返回null 
+StpUtil.getSessionBySessionId("xxxx-xxxx");
+```
+
+#### token-session
+
+```java
+// 获取当前token的专属Session 
+StpUtil.getTokenSession();
+
+// 获取指定token的专属Session 
+StpUtil.getTokenSessionByToken(token);
+```
+
+#### custom-session
+
+```java
+// 查询指定key的Session是否存在
+SaSessionCustomUtil.isExists("goods-10001");
+
+// 获取指定key的Session，如果没有，则新建并返回
+SaSessionCustomUtil.getSessionById("goods-10001");
+
+// 获取指定key的Session，如果没有，第二个参数决定是否新建并返回  
+SaSessionCustomUtil.getSessionById("goods-10001", false);   
+
+// 删除指定key的Session
+SaSessionCustomUtil.deleteSessionById("goods-10001");
+```
+
+#### session环境隔离
+
+所谓环境隔离是指SaSession与HttpSession是没有任何关系的，也就是说两者之间的存值取值是不共用的，HttpSession 没有被框架接管，也建议如果使用sa-token框架的话就不尽量不使用HttpSession 。
+
+```java
+@GetMapping("/test")
+public void reset(HttpSession session) {
+    // 用HttpSession存值 
+    session.setAttribute("test", 123);
+    // 用SaSession取值
+    System.out.println(StpUtil.getSession().getAttribute("test"));    // 结果：null
+}
+```
+
