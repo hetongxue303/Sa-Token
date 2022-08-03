@@ -8,3 +8,4 @@ spring:
       - application-web.yml
       - application-log.yml
       - application-satoken.yml
+      - application-redis.yml

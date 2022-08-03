@@ -846,3 +846,74 @@ public void reset(HttpSession session) {
 }
 ```
 
+---
+
+## 深入使用
+
+### 集成Redis
+
+Sa-token 默认是将数据保存在内存中，这样可以使读写速度加快，且避免了序列化与反序列化带来的性能消耗，但是这样做也有一些缺点，比如重启后数据丢失，分布式环境数据无法共享等问题。所以在Sa-Token中提供了扩展接口，使你可以将数据存储于`Redis`、`Memcached`等缓存中间件之中。从而达到数据不丢失，且可共享的目的。
+
+#### 依赖引入
+
+-  jdk 默认序列化方式
+
+> 优点：兼容性好
+>
+> 缺点：序列化后基本不可读
+
+```xml
+<dependency>
+    <groupId>cn.dev33</groupId>
+    <artifactId>sa-token-dao-redis</artifactId>
+    <version>1.30.0</version>
+</dependency>
+```
+
+-  jackson 序列化方式
+
+> 优点：序列化后可读性强 灵活易修改
+>
+> 缺点：兼容性差
+
+```xml
+<dependency>
+    <groupId>cn.dev33</groupId>
+    <artifactId>sa-token-dao-redis-jackson</artifactId>
+    <version>1.30.0</version>
+</dependency>
+```
+
+#### Redis序列化配置
+
+#### Redis配置文件
+
+配置时必须的，若不做配置则不能正常使用。
+
+```yaml
+# 端口
+spring: 
+    # redis配置 
+    redis:
+        # Redis数据库索引（默认为0）
+        database: 1
+        # Redis服务器地址
+        host: 127.0.0.1
+        # Redis服务器连接端口
+        port: 6379
+        # Redis服务器连接密码（默认为空）
+        # password: 
+        # 连接超时时间
+        timeout: 10s
+        lettuce:
+            pool:
+                # 连接池最大连接数
+                max-active: 200
+                # 连接池最大阻塞等待时间（使用负值表示没有限制）
+                max-wait: -1ms
+                # 连接池中的最大空闲连接
+                max-idle: 10
+                # 连接池中的最小空闲连接
+                min-idle: 0
+```
+

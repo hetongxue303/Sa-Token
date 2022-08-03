@@ -28,13 +28,20 @@
             <dependency>
                 <groupId>com.alibaba</groupId>
                 <artifactId>fastjson</artifactId>
-                <version>1.2.80</version>
+                <version>1.2.83</version>
             </dependency>
 
             <!--sa-token-->
             <dependency>
                 <groupId>cn.dev33</groupId>
                 <artifactId>sa-token-spring-boot-starter</artifactId>
+                <version>1.30.0</version>
+            </dependency>
+
+            <!--sa-token-redis-jackson-->
+            <dependency>
+                <groupId>cn.dev33</groupId>
+                <artifactId>sa-token-dao-redis-jackson</artifactId>
                 <version>1.30.0</version>
             </dependency>
         </dependencies>
@@ -77,6 +84,10 @@
         <dependency>
             <groupId>cn.dev33</groupId>
             <artifactId>sa-token-spring-boot-starter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>cn.dev33</groupId>
+            <artifactId>sa-token-dao-redis-jackson</artifactId>
         </dependency>
 
     </dependencies>
