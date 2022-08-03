@@ -377,17 +377,24 @@ StpUtil.disable(10001, 86400);
 
 sa-token通过使用一个全局拦截器来完成注解鉴权功能，为了使项目产生不必要负担，拦截器默认是不开启的。因此我们需要手动将sa-token的全局拦截器注册到你的项目中。并且注解鉴权只能使用在`controller`层。
 
-#### 1.注册全局拦截器
+#### 1.注册注解拦截器
+
+- 注解拦截器：`SaAnnotationInterceptor`
 
 新建一个配置类，我这以`SaTokenConfiguration.java`为例。
 ```java
 @Configuration
 @EnableWebMvc
 public class SaTokenConfiguration implements WebMvcConfigurer {
+    /**
+     * 注册注解拦截器 排除不需要注解鉴权的接口地址 (与登录拦截器无关)
+     */
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        // 注册注解拦截器 排除不需要注解鉴权的接口地址 (与登录拦截器无关)
-        registry.addInterceptor(new SaAnnotationInterceptor()).addPathPatterns("/**");
+        // 注册注解拦截器
+        registry.addInterceptor(new SaAnnotationInterceptor())
+                // 不需要鉴权的接口地址
+                .addPathPatterns("/**");
     }
 }
 ```
@@ -545,5 +552,103 @@ public class AuthController {
 }
 ```
 
+### 路由鉴权
 
+#### 1.注册路由拦截器
+
+- 路由拦截器：`SaRouteInterceptor`
+
+#### 2.默认的登录校验
+
+> new SaRouteInterceptor()是最简单的无参构造写法，代表只进行默认的登录校验功能。
+
+```java
+@Configuration
+@EnableWebMvc
+public class SaTokenConfiguration implements WebMvcConfigurer {
+    // 放行白名单(除白名单内的接口 其余的都需要验证)
+    private static final String[] WHITELIST = {"/auth/login"};
+
+    /**
+     * 注册路由拦截器(只进行默认的登录校验功能)
+     */
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        registry.addInterceptor(new SaRouteInterceptor())
+                .addPathPatterns("/**")
+                // 白名单
+                .excludePathPatterns(WHITELIST);
+    }
+}
+```
+
+#### 3.自定义认证规则
+
+```java
+@Configuration
+@EnableWebMvc
+public class SaTokenConfiguration implements WebMvcConfigurer {
+    /**
+     * 注册路由拦截器(自定义拦截规则)
+     */
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        registry.addInterceptor(new SaRouteInterceptor((req, res, handler) -> {
+            // 登录认证    拦截所有路由，并排除/user/doLogin 用于开放登录
+            SaRouter.match("/**", "/auth/login", r -> StpUtil.checkLogin());
+
+            // 角色认证    拦截以 test 开头的路由，必须具备 admin 角色或者 super-admin 角色才可以通过认证
+            SaRouter.match("/test/**", r -> StpUtil.checkRoleOr("admin", "super-admin"));
+
+            // 权限认证    不同模块认证不同权限
+            SaRouter.match("/test/**", r -> StpUtil.checkPermission("test"));
+            SaRouter.match("/admin/**", r -> StpUtil.checkPermission("admin"));
+            SaRouter.match("/super-admin/**", r -> StpUtil.checkPermission("super-admin"));
+        })).addPathPatterns("/**");
+    }
+}
+```
+
+#### 4.匹配特征
+
+```java
+// 基础写法 即/auth(也可以写多个)下的所有接口需要登录才能通过
+SaRouter.match("/auth/**").check(r -> StpUtil.checkLogin());
+
+// 根据请求类型匹配 
+SaRouter.match(SaHttpMethod.GET).check(r -> {});
+
+// 多条件匹配
+SaRouter
+    .match(SaHttpMethod.POST)
+    .match("/admin/**")
+    .match("/**/send/**") 
+    .notMatch("/**/*.js")
+    .notMatch("/**/*.css")
+    // ....
+    .check(r -> {});
+
+/**
+ * 提前退出匹配链
+ * stop():停止匹配 并且忽略后面剩余的匹配 进入controller
+ * back():停止匹配 直接向前端返回结果
+ */
+SaRouter.match("/**").check(r -> {}).stop();
+SaRouter.match("/**").check(r -> {}).back();
+```
+
+#### 5.作用域
+
+free作用域是指打开一个独立的作用域，使内部的 stop() 不再一次性跳出整个 Auth 函数，而是仅仅跳出当前 free 作用域。
+
+```java
+// 进入 free 独立作用域 
+SaRouter.match("/**").free(r -> {
+    SaRouter.match("/a/**").check(r -> {});
+    SaRouter.match("/a/**").check(r -> {}).stop();
+    SaRouter.match("/a/**").check(r -> {});
+});
+// 执行 stop() 函数跳出 free 后继续执行下面的 match 匹配 
+SaRouter.match("/**").check(r -> {});
+```
 
