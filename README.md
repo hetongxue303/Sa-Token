@@ -886,9 +886,32 @@ Sa-token 默认是将数据保存在内存中，这样可以使读写速度加�
 
 #### Redis序列化配置
 
-#### Redis配置文件
+```java
+@Configuration
+@EnableCaching// 开启缓存
+public class RedisConfiguration {
 
-配置时必须的，若不做配置则不能正常使用。
+    @Bean
+    public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory redisConnectionFactory) {
+        RedisTemplate<String, Object> redisTemplate = new RedisTemplate<>();
+
+        // 设置 key 值序列化方式
+        StringRedisSerializer stringRedisSerializer = new StringRedisSerializer();
+        redisTemplate.setKeySerializer(stringRedisSerializer);
+        redisTemplate.setHashKeySerializer(stringRedisSerializer);
+        // 设置 value 值序列化方式
+        Jackson2JsonRedisSerializer<Object> jackson2JsonRedisSerializer = new Jackson2JsonRedisSerializer<>(Object.class);
+        redisTemplate.setValueSerializer(jackson2JsonRedisSerializer);
+        redisTemplate.setHashValueSerializer(jackson2JsonRedisSerializer);
+
+        redisTemplate.setConnectionFactory(redisConnectionFactory);
+        return redisTemplate;
+    }
+
+}
+```
+
+#### Redis配置文件
 
 ```yaml
 # 端口
@@ -916,4 +939,119 @@ spring:
                 # 连接池中的最小空闲连接
                 min-idle: 0
 ```
+
+### 前后端分离
+
+在之前的文章中，我们使用的是常规的web鉴权方案，由cookie模式完成，其特性包括：由后端写入，每一次请求都会自动提交。这样的鉴权一般由后端控制完成，在前端不需要做任何的操作，而在app、小程序等前后端分离的场景中是不存在cookie这个东西，这时候就需要使用到Token进行鉴权。这时候就只需要后端生成token后将token传递到前端，在之后的每一次提交都不能是自动提交，而使用手动提交，这时候就需要前端将token传递到后端并解析是否正确或过期等问题。
+
+#### Token鉴权
+
+> token详细信息：`StpUtil.getTokenInfo()`
+>
+> - 此方法会返回一个对象，其中包括两个属性：`tokenName`和`tokenValue`。
+> - 可以将这个对象传递到前端并由前端保存到本地即可。
+
+示例代码：
+
+```java
+@RestController
+@RequestMapping("/auth")
+public class AuthController {
+
+    // 这里省去数据库校验 直接使用固定数据校验
+    private final static Long ID = 10001L;
+    private final static String USERNAME = "admin";
+    private final static String PASSWORD = "123456";
+
+    @PostMapping("/login")
+    public SaResult login(String username, String password) {
+        // 1.校验用户名和密码
+        if (USERNAME.equals(username) && PASSWORD.equals(password)) {
+            // 根据ID进行登录
+            StpUtil.login(ID);
+            // 生成token对象
+            SaTokenInfo tokenInfo = StpUtil.getTokenInfo();
+            // 设置token信息到响应头
+            response.setHeader(tokenInfo.getTokenName(), tokenInfo.getTokenValue());
+            return SaResult.ok().setMsg("登陆成功");
+        }
+        return SaResult.error().setMsg("登陆失败");
+    }
+}
+```
+
+#### 自定义Token风格
+
+> 只需要在yml配置文件里设置 `sa-token.token-style=风格类型` 即可
+
+```java
+// 1. token-style=uuid    —— uuid风格 (默认风格)
+"623368f0-ae5e-4475-a53f-93e4225f16ae"
+
+// 2. token-style=simple-uuid    —— 同上，uuid风格, 只不过去掉了中划线
+"6fd4221395024b5f87edd34bc3258ee8"
+
+// 3. token-style=random-32    —— 随机32位字符串
+"qEjyPsEA1Bkc9dr8YP6okFr5umCZNR6W"
+
+// 4. token-style=random-64    —— 随机64位字符串
+"v4ueNLEpPwMtmOPMBtOOeIQsvP8z9gkMgIVibTUVjkrNrlfra5CGwQkViDjO8jcc"
+
+// 5. token-style=random-128    —— 随机128位字符串
+"nojYPmcEtrFEaN0Otpssa8I8jpk8FO53UcMZkCP9qyoHaDbKS6dxoRPky9c6QlftQ0pdzxRGXsKZmUSrPeZBOD6kJFfmfgiRyUmYWcj4WU4SSP2ilakWN1HYnIuX0Olj"
+
+// 6. token-style=tik    —— tik风格
+"gr_SwoIN0MC1ewxHX_vfCW3BothWDZMMtx__"
+```
+
+#### 自定义Token生成策略
+
+如果你觉着以上风格都不是你喜欢的类型，那么你还可以**自定义token生成策略**，来定制化token生成风格。只需要重写 `SaStrategy` 策略类的 `createToken` 算法，再次调用`StpUtil.login()`方法即可：
+
+```java
+@Configuration
+public class SaTokenConfigure {
+    /**
+     * 重写 Sa-Token 框架内部算法策略 
+     */
+    @Autowired
+    public void rewriteSaStrategy() {
+        // 重写 Token 生成策略 
+        SaStrategy.me.createToken = (loginId, loginType) -> {
+            return SaFoxUtil.getRandomString(60);    // 随机60位长度字符串
+        };
+    }
+}
+```
+
+#### 自定义Token前缀
+
+在某些系统开发中，需要自定义token的前缀，此时我们只需要做如下配置即可：
+
+```yaml
+sa-token: 
+    # token前缀
+    token-prefix: Bearer 
+```
+
+此时token的样式为：
+
+```json
+{
+    "satoken": "Bearer xxxx-xxxx-xxxx-xxxx"
+}
+```
+
+*注意：在token前缀与token值之前必须存在一个空格，且在之后的提交中都必须带上前缀。由于cookie中不能存空格，也就意味着如果使用了前缀的话，cookie将会失效，这时候就需要将token放于header中传输，具体请参考Token鉴权代码。*
+
+### 记住我
+
+在一些登陆界面会经常会看到`记住我`的按钮，勾选记住我之后，当你把浏览器关闭后再打开，也依旧是登陆状态，不用重复登陆。而Sa-Token默认的登陆模式就是`记住我`模式，具体只需要在登陆时设置第二参数的值即可。
+
+```java
+// true:开启记住我  false:关闭记住我
+StpUtil.login(10001, false);
+```
+
+实现原理：
 

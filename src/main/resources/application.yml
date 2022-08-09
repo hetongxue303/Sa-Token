@@ -7,5 +7,5 @@ spring:
     import:
       - application-web.yml
       - application-log.yml
-      - application-satoken.yml
+      - application-saToken.yml
       - application-redis.yml
