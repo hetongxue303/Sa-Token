@@ -16,3 +16,5 @@ sa-token:
   is-log: false
   # token前缀
   token-prefix: Bearer
+  # jwt秘钥
+  jwt-secret-key: asdfghjklqwertyuiopzxcvbnm

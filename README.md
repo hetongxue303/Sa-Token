@@ -13,7 +13,7 @@ sa-token是一个轻量级java权限认证框架，可以使鉴权变得更加�
 
 ### 框架集成
 
-#### sa-token依赖
+#### 添加Sa-Token依赖
 
 ```xml
 <!--sa-token-->
@@ -24,12 +24,15 @@ sa-token是一个轻量级java权限认证框架，可以使鉴权变得更加�
 </dependency>
 ```
 
-#### 通过配置文件配置
+#### 配置Sa-Token
+Sa-Token提供两种配置方式：`配置文件配置`和`代码配置`
+
+- **通过配置文件配置**
 
 在使用`sa-token`本身可以零配置启动，但同时也可以在`application.yml或application.properties`下自定义配置，具体如下：
 
 ```yaml
-# Sa-Token配置
+# Sa-Token基础配置
 sa-token:
   # token 名称 (同时也是cookie名称)
   token-name: satoken
@@ -47,13 +50,13 @@ sa-token:
   is-log: false
 ```
 
-#### 通过代码配置
+- **通过代码配置**
 
 ```java
 @Configuration
 public class SaTokenConfiguration implements WebMvcConfigurer {
 
-    /****************方式1:此配置会覆盖yml中的配置******************/
+    /****************方式1:这个配置会覆盖yml中的配置******************/
     @Bean
     @Primary
     public SaTokenConfig getSaTokenConfigPrimary() {
@@ -68,7 +71,7 @@ public class SaTokenConfiguration implements WebMvcConfigurer {
         return config;
     }
 
-    /****************方式2:此配置会合并yml中的配置******************/
+    /****************方式2:这个配置会合并yml中的配置******************/
     @Autowired
     public void configSaToken(SaTokenConfig config) {
         config.setTokenName("satoken");             // token名称 (同时也是cookie名称)
@@ -82,7 +85,7 @@ public class SaTokenConfiguration implements WebMvcConfigurer {
 }
 ```
 
-#### 所有配置项
+#### 配置项解读
 
 ##### sa-token
 
@@ -167,11 +170,11 @@ public class SaTokenConfiguration implements WebMvcConfigurer {
 
 #### 认证流程
 
-- 用户登录时提交`username`和`password`参数,并调用登录接口
-- 服务器校验账号密码,如果验证通过则正常返回数据 并为用户颁发token会话凭证;如果验证未通过会抛出异常,并告知用户需要先登录
-- 登陆成功后会返回该用户的token作为会话凭证
-- 在之后的每次请求中,都需要携带上token凭证
-- 服务器对携带的token凭证进行判断其是否已经登陆
+- 用户登录时需提交`username`和`password`参数,并调用登录接口;
+- 服务器校验账号密码,如果验证通过则正常返回数据 并为用户颁发token会话凭证;如果验证未通过会抛出异常,并告知用户需要先登录才能访问;
+- 在登陆成功后会返回该用户的token作为会话凭证;
+- 在之后的每次请求中都需要携带上token凭证;
+- 服务器对携带的token凭证进行判断其是否已经登陆或过期;
 
 #### 登录与注销
 
@@ -219,12 +222,12 @@ public class AuthController {
 
 - 登录结果
 
-![image-20220801221305165](C:\Users\hy\AppData\Roaming\Typora\typora-user-images\image-20220801221305165.png)
+![登陆结果](https://img-blog.csdnimg.cn/27e8af9fd68942a88d5f43d3658daade.png)
 
-由此可以看出，只需要一句代码 ` StpUtil.login(Object id)` 便可以使会话登录成功，而实际上，Sa-Token在背后为我们做了大量的工作，主要有：
+由上可以看出，只需要一句代码： ` StpUtil.login(Object id)` 便可以使会话登录成功，而实际上，Sa-Token在背后为我们做了大量的工作，主要有：
 
 1.检查此账号是否已被封禁
-2..检查此账号是否之前已有登录
+2.检查此账号是否之前已有登录
 3.为账号生成 `Token` 凭证与 `Session` 会话
 4.通知全局侦听器，xx 账号登录成功
 5.将 `Token` 注入到请求上下文
@@ -233,7 +236,7 @@ public class AuthController {
 
 - 注销结果
 
-![image-20220801221248637](C:\Users\hy\AppData\Roaming\Typora\typora-user-images\image-20220801221248637.png)
+![注销结果](https://img-blog.csdnimg.cn/3930ac3201214502998c937770243d1b.png)
 
 更多操作语句：
 
@@ -247,7 +250,7 @@ StpUtil.checkLogin();
 异常`NotLoginException`代表当前会话暂未登录，可能的原因有很多：前端没有提交 Token、前端提交的 Token 是无效的、前端提交的
 Token 已经过期 …… 等等;详情请参看[未登录场景值](https://sa-token.dev33.cn/doc/index-backup.html#/fun/not-login-scene)
 
-#### 其他常用操作
+#### 其他操作语句
 
 ```java
 /**
@@ -302,7 +305,7 @@ StpUtil.getTokenInfo();
 
 根据业务需求不同，权限设计也是千变万化，但获取当前用户的权限码集合这一操作是必不可少的。所以，在sa-token中有`StpInterface `接口，可根据自己的业务需求进行重写。其中包括连个方法，分别是：
 
-1.`List<String> getPermissionList(Object loginId, String loginType){}：返回当前账号所拥有的权限码集合；
+1.`List<String> getPermissionList(Object loginId, String loginType){}`：返回当前账号所拥有的权限码集合；
 
 2.`List<String> getRoleList(Object loginId, String loginType)`{}：返回当前帐号所拥有的角色码集合；
 
@@ -1053,5 +1056,497 @@ sa-token:
 StpUtil.login(10001, false);
 ```
 
-实现原理：
+### 集成JWT
 
+#### 引入依赖
+
+```xml
+<!-- Sa-Token 整合 jwt -->
+<dependency>
+    <groupId>cn.dev33</groupId>
+    <artifactId>sa-token-jwt</artifactId>
+    <version>1.30.0</version>
+</dependency>
+```
+
+> 注意: sa-token-jwt 显式依赖 hutool-all 5.7.14 版本，意味着：你的项目中要么不引入 Hutool，要么引入版本 >= 5.7.14 的 Hutool 版本.
+
+#### 配置jwt
+
+```yml
+sa-token:
+    # jwt秘钥 
+    jwt-secret-key: asdfghjkl
+```
+
+#### 注入jwt
+
+> 共有3中注入方式，选其一即可：
+>
+> 1.Simple 模式：Token 风格替换
+>
+> 2.Mixin 模式：混入部分逻辑
+>
+> 3.Stateless 模式：服务器完全无状态
+
+示例代码：
+
+```java
+@Configuration
+public class SaTokenConfigure {
+
+    @Bean
+    public StpLogic getStpLogicJwt() {
+        // Simple 简单模式
+        return new StpLogicJwtForSimple();
+        // Mixin 混入模式
+        //return new StpLogicJwtForMixin();
+        // Stateless 无状态模式
+        //return new StpLogicJwtForStateless();
+    }
+}
+```
+
+#### 扩展参数
+
+```java
+// 登录10001账号，并为生成的 Token 追加扩展参数name
+StpUtil.login(10001, SaLoginConfig.setExtra("name", "zhangsan"));
+
+// 连缀写法追加多个
+StpUtil.login(10001, SaLoginConfig
+                .setExtra("name", "zhangsan")
+                .setExtra("age", 18)
+                .setExtra("role", "超级管理员"));
+
+// 获取扩展参数 
+String name = StpUtil.getExtra("name");
+```
+
+- 多账户模式集成JWT
+
+```java
+@Autowired
+public void setUserStpLogic() {
+    StpUserUtil.stpLogic = new StpLogicJwtForSimple(StpUserUtil.TYPE);
+    SaManager.putStpLogic(StpUserUtil.stpLogic);
+}
+```
+
+### 密码加密
+
+严格来讲`密码加密`并不属于权限认证的范畴，但是在绝大多数的系统中，为了保证安全都会对密码进行加密，在Sa-Token也封装了一些常见的加密算法。主要包括：`md5`、	`sha1`、`sha256`、`aes`、`rsa`等；
+
+#### 摘要加密
+
+主要包括：`md5`、`sha1`、`sha256`
+
+```java
+// md5加密 
+SaSecureUtil.md5("123456");
+
+// sha1加密 
+SaSecureUtil.sha1("123456");
+
+// sha256加密 
+SaSecureUtil.sha256("123456");
+
+// md5加盐加密: md5(md5(str) + md5(salt)) 
+SaSecureUtil.md5BySalt("123456", "salt");
+```
+
+#### 对称加密
+
+主要是：`aes加密`
+
+```java
+// 定义秘钥和明文
+String key = "shujfgnugrnsihgsi";
+String text = "123456";
+
+// 加密 
+String ciphertext = SaSecureUtil.aesEncrypt(key, text);
+System.out.println("AES加密后：" + ciphertext);
+
+// 解密 
+String text2 = SaSecureUtil.aesDecrypt(key, ciphertext);
+System.out.println("AES解密后：" + text2);
+```
+
+#### 非对称加密
+
+主要是：`rsa加密`
+
+- 首先生成公/私钥
+
+```java
+// 生成一对公钥和私钥，其中Map对象 (private=私钥, public=公钥)
+System.out.println(SaSecureUtil.rsaGenerateKeyPair());
+```
+
+- 加密解密
+
+```java
+// 定义私钥和公钥 
+String privateKey = "MIICdgIBADANBgkqhkiG9w0BAQEFAASCAmAwggJcAgEAAoGBAO+wmt01pwm9lHMdq7A8gkEigk0XKMfjv+4IjAFhWCSiTeP7dtlnceFJbkWxvbc7Qo3fCOpwmfcskwUc3VSgyiJkNJDs9ivPbvlt8IU2bZ+PBDxYxSCJFrgouVOpAr8ar/b6gNuYTi1vt3FkGtSjACFb002/68RKUTye8/tdcVilAgMBAAECgYA1COmrSqTUJeuD8Su9ChZ0HROhxR8T45PjMmbwIz7ilDsR1+E7R4VOKPZKW4Kz2VvnklMhtJqMs4MwXWunvxAaUFzQTTg2Fu/WU8Y9ha14OaWZABfChMZlpkmpJW9arKmI22ZuxCEsFGxghTiJQ3tK8npj5IZq5vk+6mFHQ6aJAQJBAPghz91Dpuj+0bOUfOUmzi22obWCBncAD/0CqCLnJlpfOoa9bOcXSusGuSPuKy5KiGyblHMgKI6bq7gcM2DWrGUCQQD3SkOcmia2s/6i7DUEzMKaB0bkkX4Ela/xrfV+A3GzTPv9bIBamu0VIHznuiZbeNeyw7sVo4/GTItq/zn2QJdBAkEA8xHsVoyXTVeShaDIWJKTFyT5dJ1TR++/udKIcuiNIap34tZdgGPI+EM1yoTduBM7YWlnGwA9urW0mj7F9e9WIQJAFjxqSfmeg40512KP/ed/lCQVXtYqU7U2BfBTg8pBfhLtEcOg4wTNTroGITwe2NjL5HovJ2n2sqkNXEio6Ji0QQJAFLW1Kt80qypMqot+mHhS+0KfdOpaKeMWMSR4Ij5VfE63WzETEeWAMQESxzhavN1WOTb3/p6icgcVbgPQBaWhGg==";
+String publicKey = "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDvsJrdNacJvZRzHauwPIJBIoJNFyjH47/uCIwBYVgkok3j+3bZZ3HhSW5Fsb23O0KN3wjqcJn3LJMFHN1UoMoiZDSQ7PYrz275bfCFNm2fjwQ8WMUgiRa4KLlTqQK/Gq/2+oDbmE4tb7dxZBrUowAhW9NNv+vESlE8nvP7XXFYpQIDAQAB";
+
+// 文本
+String text = "123456";
+
+// 使用公钥加密
+String ciphertext = SaSecureUtil.rsaEncryptByPublic(publicKey, text);
+System.out.println("公钥加密后：" + ciphertext);
+
+// 使用私钥解密
+String text2 = SaSecureUtil.rsaDecryptByPrivate(privateKey, ciphertext);
+System.out.println("私钥解密后：" + text2); 
+```
+
+#### Base64编码与解码
+
+```java
+// 文本
+String text = "123456";
+
+// 使用Base64编码
+String base64Text = SaBase64Util.encode(text);
+System.out.println("Base64编码后：" + base64Text);
+
+// 使用Base64解码
+String text2 = SaBase64Util.decode(base64Text);
+System.out.println("Base64解码后：" + text2); 
+```
+
+### 同端互斥登录
+
+这里举一个很简单的例子，就好比我们使用微信，在手机登录了之后在使用电脑进行登录，此时两个设备是可以同时存在的，但当我们使用手机登陆之后，在使用另一部手机进行登录的话会发现另外一台手机会被挤下线。在同一类型设备上只允许单地点登录，也就是我们常说的被挤下线，在不同类型设备上允许同时在线。
+
+在Sa-Token中要实现同端互斥登录的话，首先需要在配置文件中将`isConcurrent `设置为`false`，然后在去调用相关的API接口即可。
+
+#### 指定登录设备类型
+
+在登录的时候我们就可以指定当前登录的设备的类型，只需要在登录的API上添加即可，如：
+
+```java
+// 指定设备类型为phone
+StpUtil.login(10001, "phone");    
+// 指定设备类型为PC
+//StpUtil.login(10001, "PC");    
+```
+*在使用此方法登陆时，同设备的会被顶下线（不同设备不受影响），再次访问系统时会抛出`NotLoginException`异常，场景值=`-4`*
+
+#### 指定登录设备类型强制注销
+
+只需要在注销时注明注销的设备类型即可；
+
+```java
+StpUtil.logout(10001, "PC");    
+```
+*如果第二个参数填写`null`或不填，代表将这个账号id所有在线端强制注销，被踢出者再次访问系统时会抛出 `NotLoginException` 异常，场景值=`-2`*
+
+#### 查询当前登录设备类型
+```java
+// 返回当前token的登录设备类型
+StpUtil.getLoginDevice();    
+```
+
+#### 使用ID反查Token
+```
+// 获取指定loginId指定设备类型端的tokenValue 
+StpUtil.getTokenValueByLoginId(10001, "APP");    
+```
+
+### 二级认证
+
+在一些比较敏感的操作的时候，我们需要对已经登录的用户再次进行二次操作。这更加安全的保护了用户的信息安全，假设在删除某些资源的时候就需要使用到二级验证。来确定是否为本人操作或确定是否删除。从而来保证是否为账户本人在操作，避免误删重要数据。在已登录会话的基础上，进行再次验证，提高会话的安全性。
+
+#### 相关API
+
+```java
+// 在当前会话 开启二级认证 并设置时间为120(单位：秒)
+StpUtil.openSafe(120); 
+
+// 查询当前会话是否处于二级认证时间内
+StpUtil.isSafe(); 
+
+// 检查当前会话是否已通过二级认证 若未通过则抛出异常
+StpUtil.checkSafe(); 
+
+// 获取当前会话的二级认证剩余有效时间 (单位: 秒, 返回-2代表尚未通过二级认证)
+StpUtil.getSafeTime(); 
+
+// 在当前会话 结束二级认证
+StpUtil.closeSafe(); 
+```
+
+*在前面我们提到了注解，在这里也可以使用注解`@SaCheckSafe `来进行二次验证。具体如下：*
+
+```java
+@SaCheckSafe      
+@RequestMapping("user-insert")
+public String insert() {
+    return "用户增加";
+}
+```
+
+### Http Basic认证
+
+Http Basic 是 http 协议中最基础的认证方式，其有两个特点：
+
+- 简单、易集成。
+
+- 功能支持度低。
+
+在 Sa-Token 中使用 Http Basic 认证非常简单，只需调用几个简单的方法：
+
+**配置二级账户**
+```yaml
+# 表示账户名：user 密码：123456
+sa-token:
+  basic: user:123456
+```
+#### 代码启用Http Basic认证
+
+```java
+@RequestMapping("test")
+public SaResult test() {
+    SaBasicUtil.check("user:123456");// 通过
+    //SaBasicUtil.check("user:123123");// 未通过
+    // ... 其他代码
+    return SaResult.ok();
+}
+```
+
+**全局异常处理**
+
+```java
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+    @ExceptionHandler
+    public SaResult handlerException(Exception e) {
+        e.printStackTrace(); 
+        return SaResult.error(e.getMessage());
+    }
+}
+```
+
+#### 注解启用Http Basic认证
+
+```java
+@SaCheckBasic(account = "user:123456")
+@RequestMapping("test")
+public SaResult test() {
+    return SaResult.ok();
+}
+
+// 在全局拦截器 或 过滤器中启用 Basic 认证 
+@Bean
+public SaServletFilter getSaServletFilter() {
+    return new SaServletFilter()
+            .addInclude("/**").addExclude("/favicon.ico")
+            .setAuth(object -> {
+                SaRouter.match("/test/**", () -> SaBasicUtil.check("user:123456"));
+            });
+}
+```
+
+### 全局侦听器
+接口`SaTokenListener`是`Sa-Token`的全局侦听器，通过实现此接口，你可以在用户登陆、退出、被踢下线等关键性操作时进行一些AOP操作。
+
+框架对此侦听器的默认实现是log日志输出，你可以通过配置`sa-token.is-log=true`开启。
+
+#### 自定义侦听器
+
+```java
+/**
+ * 自定义侦听器的实现 
+ */
+@Component
+public class GlobalListenerimplements SaTokenListener {
+
+    /**
+     * 每次登录时触发
+     */
+    @Override
+    public void doLogin(String loginType, Object loginId, String tokenValue, SaLoginModel loginModel) {}
+
+    /**
+     * 每次注销时触发
+     */
+    @Override
+    public void doLogout(String loginType, Object loginId, String tokenValue) {}
+
+    /**  
+     * 每次被踢下线时触发
+     */
+    @Override
+    public void doKickout(String loginType, Object loginId, String tokenValue) {}
+
+    /** 
+     * 每次被顶下线时触发
+     */
+    @Override
+    public void doReplaced(String loginType, Object loginId, String tokenValue) {}
+
+    /** 
+     * 每次被封禁时触发
+     */
+    @Override
+    public void doDisable(String loginType, Object loginId, long disableTime) {}
+
+    /**  
+     * 每次被解封时触发
+     */
+    @Override
+    public void doUntieDisable(String loginType, Object loginId) {}
+
+    /** 
+     * 每次创建Session时触发
+     */
+    @Override
+    public void doCreateSession(String id) {}
+
+    /** 
+     * 每次注销Session时触发
+     */
+    @Override
+    public void doLogoutSession(String id) {}
+
+}
+```
+
+### 全局过滤器
+
+在之前我们有学习到`根据拦截器实现路由拦截鉴权·`，但在大多数web框架中，使用过滤器可以实现同样的功能，这里我们也可以使用Sa-Token全局过滤器来实现路由拦截器鉴权。
+
+既然拦截器已经可以实现路由鉴权，为什么还要用过滤器再实现一遍呢？
+
+1.相比于拦截器，过滤器更加底层，执行时机更靠前，有利于防渗透扫描。
+2.过滤器可以拦截静态资源，方便我们做一些权限控制。
+3.部分Web框架根本就没有提供拦截器功能，但几乎所有的Web框架都会提供过滤器机制。
+
+过滤器缺点：
+
+1.由于太过底层，导致无法率先拿到HandlerMethod对象，无法据此添加一些额外功能。
+2.由于拦截的太全面了，导致我们需要对很多特殊路由(如/favicon.ico)做一些额外处理。
+3.在Spring中，过滤器中抛出的异常无法进入全局@ExceptionHandler，我们必须额外编写代码进行异常处理。
+
+Sa-Token同时提供过滤器和拦截器机制，不是为了让谁替代谁，而是为了让大家根据自己的实际业务合理选择，拥有更多的发挥空间。
+
+#### 注册过滤器
+
+```java
+@Configuration
+public class SaTokenConfigure {
+
+    /**
+     * 注册 Sa-Token全局过滤器]
+     */
+    @Bean
+    public SaServletFilter getSaServletFilter() {
+        return new SaServletFilter()
+                // 指定 拦截路由 与 放行路由
+                .addInclude("/**").addExclude("/favicon.ico")
+                // 认证函数: 每次请求执行 
+                .setAuth(obj -> {
+                    System.out.println("---------- 进入Sa-Token全局认证 -----------");
+                    // 登录认证 -- 拦截所有路由，并排除/user/doLogin 用于开放登录 
+                    SaRouter.match("/**", "/user/doLogin", () -> StpUtil.checkLogin());
+                    // 更多拦截处理方式，请参考“路由拦截式鉴权”章节 
+                })
+                // 异常处理函数：每次认证函数发生异常时执行此函数 
+                .setError(e -> {
+                    System.out.println("---------- 进入Sa-Token异常处理 -----------");
+                    return SaResult.error(e.getMessage());
+                })
+                // 前置函数：在每次认证函数之前执行
+                .setBeforeAuth(r -> {
+                    // ---------- 设置一些安全响应头 ----------
+                    SaHolder.getResponse()
+                    // 服务器名称 
+                    .setServer("sa-server")
+                    // 是否可以在iframe显示视图： DENY=不可以 | SAMEORIGIN=同域下可以 | ALLOW-FROM uri=指定域名下可以 
+                    .setHeader("X-Frame-Options", "SAMEORIGIN")
+                    // 是否启用浏览器默认XSS防护： 0=禁用 | 1=启用 | 1; mode=block 启用, 并在检查到XSS攻击时，停止渲染页面 
+                    .setHeader("X-XSS-Protection", "1; mode=block")
+                    // 禁用浏览器内容嗅探 
+                    .setHeader("X-Content-Type-Options", "nosniff");
+          });
+    }
+}
+```
+
+### 模拟他人&临时身份切换
+何为模拟他人？在以上所说的都是操作当前账号，对当前账号进行各种鉴权操作，但是如果我们需要对其他人的账户进行操作，比如我们想看ID10002有没有某个权限，或者ID10003是不是管理员等等。只需要使用以下API即可：
+
+#### 模拟他人API
+```java
+// 获取指定账号10001的`tokenValue`值 
+StpUtil.getTokenValueByLoginId(10001);
+
+// 将账号10001的会话注销登录
+StpUtil.logout(10001);
+
+// 获取账号10001的Session对象, 如果session尚未创建, 则新建并返回
+StpUtil.getSessionByLoginId(10001);
+
+// 获取账号10001的Session对象, 如果session尚未创建, 则返回null 
+StpUtil.getSessionByLoginId(10001, false);
+
+// 获取账号10001是否含有指定角色标识 
+StpUtil.hasRole(10001, "super-admin");
+
+// 获取账号10001是否含有指定权限码
+StpUtil.hasPermission(10001, "user:insert");
+```
+
+#### 临时身份切换API
+
+将当前会话的身份切换为其它账号；
+
+```java
+// 将当前会话[身份临时切换]为其它账号（本次请求内有效）
+StpUtil.switchTo(10044);
+
+// 此时再调用此方法会返回 10044 (我们临时切换到的账号id)
+StpUtil.getLoginId();
+
+// 结束 [身份临时切换]
+StpUtil.endSwitch();
+```
+
+### 会话治理
+
+尽管框架将大部分操作提供了简易的封装，但在一些特殊场景下，我们仍需要绕过框架，直达数据底层进行一些操作。
+
+#### 具体API
+```java
+// 查询所有token
+StpUtil.searchTokenValue(String keyword, int start, int size);
+
+// 查询所有账号Session会话
+StpUtil.searchSessionId(String keyword, int start, int size);
+
+// 查询所有令牌Session会话
+StpUtil.searchTokenSessionId(String keyword, int start, int size);
+```
+
+**参数说明**
+- `keyword`: 查询关键字，只有包括这个字符串的 token 值才会被查询出来。
+- `start`: 数据开始处索引, 值为-1时代表一次性取出所有数据。
+- `size`: 要获取的数据条数。
+
+#### 使用示例
+
+```java
+// 查询value包括1000的所有token，结果集从第0条开始，返回10条
+List<String> tokenList = StpUtil.searchTokenValue("1000", 0, 10);    
+for (String token : tokenList) {
+    System.out.println(token);
+}
+```
+
+## 最后
+
+Sa-Token是一个轻量级 `Java` 权限认证框架，其中包括了很多的知识要点，其中不乏有SSO整合、OAuth 2.0以及微服务等等。我这里只是列举了我自己以及大多数人可能使用得到的功能要点，如果想要深入的学习`Sa-Token`可转至官网 [`Sa-Token`](https://sa-token.dev33.cn/)进行学习，希望能帮到大家，祝大家学习愉快！

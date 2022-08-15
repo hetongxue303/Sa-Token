@@ -51,7 +51,7 @@ public class AuthController {
             );
             // 设置token信息到响应头
             response.setHeader("authorization", tokenInfo.getTokenValue());
-            return SaResult.ok().setMsg("登陆成功").setData(tokenInfo.getTokenValue());
+            return SaResult.ok().setMsg("登陆成功").setData(tokenInfo);
         }
         return SaResult.error().setMsg("登陆失败");
     }

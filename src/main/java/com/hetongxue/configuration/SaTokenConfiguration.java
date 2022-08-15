@@ -1,7 +1,9 @@
 package com.hetongxue.configuration;
 
+import cn.dev33.satoken.jwt.StpLogicJwtForStateless;
+import cn.dev33.satoken.stp.StpLogic;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 /**
@@ -11,10 +13,14 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
  * @DateTime: 2022-08-02 16:49
  */
 @Configuration
-@EnableWebMvc
 public class SaTokenConfiguration implements WebMvcConfigurer {
     // 放行白名单(除白名单内的接口 其余的都需要验证)
     private static final String[] WHITELIST = {"/auth/login"};
+
+    @Bean
+    public StpLogic getStpLogicJwt() {
+        return new StpLogicJwtForStateless();
+    }
 
     /**
      * 注册注解拦截器 排除不需要注解鉴权的接口地址 (与登录拦截器无关)
